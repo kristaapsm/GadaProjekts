@@ -1,14 +1,24 @@
+import keyboard
 import pygame
 import random
+import time
 
+from db import Database
 # inizalize tetri un nosaka screen vertibu
+
+
+
 pygame.init()
+
 SCREEN = WIDTH, HEIGHT = 600,600
 win = pygame.display.set_mode(SCREEN)
 
+f = open('m.txt', 'w')
+
+
 # FPS
 clock = pygame.time.Clock()
-FPS = 24
+FPS = 60
 
 # noteiktās vērtības 
 CELLSIZE = 35
@@ -22,6 +32,9 @@ BLUE = (31,25,76)
 RED = (252,91,122)
 WHITE = (255,255,255)
 GRAY = (220,220,220)
+
+
+
 
 # BLOCKS 
 
@@ -56,7 +69,7 @@ class Tetramino:
         'O' : [[1, 2, 5, 6]],
         'T' : [[4, 5, 1, 6], [1, 5, 6, 9], [4, 5, 6, 9], [1, 5, 4, 9]],
         'L' : [[4, 5, 6, 2], [1, 5, 9, 10], [4, 5, 6, 8], [9, 5, 1, 0]],
-        'J' : [[0, 4,5, 6], [2, 1, 5, 9], [4, 5, 6, 10], [1, 5, 9, 12]]    
+        'J' : [[0, 4,5, 6], [2, 1, 5, 9], [4, 5, 6, 10], [1, 5, 9, 8]]    
         
     }
     
@@ -100,9 +113,10 @@ class Tetris:
     
     def newFigure(self):
         if not self.nextFigure:
-            self.nextFigure = Tetramino(5, 0)
+            self.nextFigure = Tetramino(5, 0)           
         self.figure = self.nextFigure
         self.nextFigure = Tetramino(5, 0)
+        
         
     def gravity(self):
         self.figure.y += 1   
@@ -165,20 +179,29 @@ class Tetris:
                 if i * 4 + j in self.figure.image():
                     self.board[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.destroy_line()
+       #f.writelines(str(tetris.figure.type)+", ")
         self.newFigure()
         if self.intersect():
-            self.gameover = True            
-    
+            self.gameover = True       
+                       
+ 
+
 counter = 0
 increaseGravity = False
 can_move = True
+d = 0
 
 tetris = Tetris(ROWS, COLS)
 
+Database.connect()
 
 running = True
-while running: 
+while running:
+    
+    ticks = pygame.time.get_ticks()
+    
     win.fill(BLACK)
+    k_event = ""
     
     counter += 1
     if counter >= 10000:
@@ -188,33 +211,72 @@ while running:
         if counter % (FPS // (tetris.level * 2)) ==0 or increaseGravity:
             if not tetris.gameover:
                 tetris.gravity()
-        
+     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False          
 
         if event.type == pygame.KEYDOWN:
 
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                 tetris.xMovement(-1)
-            
-            if event.key == pygame.K_RIGHT:
+                
+                mov = " a\n"
+                time = str(pygame.time.get_ticks())
+                e = time +"," + mov
+                
+                
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 tetris.xMovement(1)
                 
-            if event.key == pygame.K_UP:
+                r = " d\n"
+                time = str(pygame.time.get_ticks())
+                e = time +","+ r
+             #  f.writelines(str(e))
+                
+            if event.key == pygame.K_UP or event.key == pygame.K_u:
                 tetris.rotate()
-            
+                print(tetris.figure.color,tetris.figure.type)
+                u = " w\n"
+                time = str(pygame.time.get_ticks())
+                e = time + "," + u 
+             #   f.writelines(str(e))
+                
             if event.key == pygame.K_DOWN:
                 increaseGravity = True
-            
+                print(k_event)
             if event.key == pygame.K_SPACE and not tetris.gameover:
                 tetris.instant()
                 
+            #recording
+            if event.key == pygame.K_F10:
+                print("time for the truth")  
+                              
             if event.key == pygame.K_p:
                 can_move = not can_move
-                
             if event.key== pygame.K_r:
                 tetris.__init__(ROWS,COLS)
+            
+            
+                
+            if event.key == pygame.K_h:
+                f.close()
+                f = open("m.txt", "r")
+                currtick = pygame.time.get_ticks()
+                for x in f:
+                    b = x.split(',')
+                    cc = int(b[0])
+                    x =  cc + currtick
+                    
+                    print ("x - ", x)
+                    print("ticks - ", currtick)
+                    
+                    if x == currtick:
+                        print(" ")
+                        keyboard.press_and_release(b[1].strip)                    
+                 
+                
+                
                 
             if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
                 running = False 
