@@ -7,13 +7,15 @@ from db import Database
 # inizalize tetri un nosaka screen vertibu
 
 
-keyList= []
+
 pygame.init()
 
 SCREEN = WIDTH, HEIGHT = 600,600
 win = pygame.display.set_mode(SCREEN)
 
-#f = open('m.txt', 'r')
+
+CUSTOM_PLAYBACK_EVENT = pygame.USEREVENT + 1
+
 
 
 # FPS
@@ -50,12 +52,32 @@ Assets = {
     4: img4
 }
 
+# variables
+
+
+
 # FONTS
 font = pygame.font.Font('Fonts/FontsFree-Net-Tetris.ttf',50)
 font2 = pygame.font.SysFont('cursive',25)
 
 
+def queue_next_event(event_list, event_index):
+        """Set a timer for the next playback event"""
+        if event_index == 0:
+            timer_duration = 100  # effectively immediate
+        else:
+            elapsed_time = event_list[event_index][1] - event_list[event_index - 1][1]
+            timer_duration = round(elapsed_time * 1000)  # convert to milliseconds
+        pygame.time.set_timer(CUSTOM_PLAYBACK_EVENT, timer_duration)
+        print(f"{time.time()} Set timer for {timer_duration} ms")
+
 class Tetramino:
+    
+    running = True
+    counter = 0
+    can_move = True   
+    increaseGravity = False
+     
     # matrix
     # 0   1   2   3
     # 4   5   6   7
@@ -63,19 +85,21 @@ class Tetramino:
     # 12  13  14  15
 # pieminet to ka figuras un tas rotacijas ir veidotas pec noteikumiem
     FIGURES = {
-        'I' : [[4, 5, 6, 7], [2, 6, 10, 14]],
-        'S' : [[4, 5, 1, 2], [1, 5, 6, 10],[8,9,5,6],[0,4,5,9]],
-        'Z' : [[0, 1, 5, 6], [9, 5, 6, 2],[4,5,9,10],[1,5,4,8]],
+        'I' : [[1, 2, 5, 6]],
+        'S' : [[1, 2, 5, 6]],
+        'Z' : [[1, 2, 5, 6]],
         'O' : [[1, 2, 5, 6]],
-        'T' : [[4, 5, 1, 6], [1, 5, 6, 9], [4, 5, 6, 9], [1, 5, 4, 9]],
-        'L' : [[4, 5, 6, 2], [1, 5, 9, 10], [4, 5, 6, 8], [9, 5, 1, 0]],
-        'J' : [[0, 4,5, 6], [2, 1, 5, 9], [4, 5, 6, 10], [1, 5, 9, 8]]    
+        'T' : [[1, 2, 5, 6]],
+        'L' : [[1, 2, 5, 6]],
+        'J' : [[1, 2, 5, 6]]   
         
     }
     
     TYPES = ['I', 'S', 'Z', 'O', 'T', 'L', 'J']
     
 
+    
+    
     def __init__(self,x,y):
         self.x = x
         self.y = y
@@ -179,124 +203,118 @@ class Tetris:
                 if i * 4 + j in self.figure.image():
                     self.board[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.destroy_line()
-       #f.writelines(str(tetris.figure.type)+", ")
         self.newFigure()
         if self.intersect():
             self.gameover = True       
                        
- 
+    def handle_event(self,event):
+        if event.type == pygame.KEYDOWN:
 
-counter = 0
-increaseGravity = False
-can_move = True
-d = 0
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.xMovement(-1)                
+                
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.xMovement(1)
+                
+            if event.key == pygame.K_UP or event.key == pygame.K_u:
+                self.rotate()
+                
+            if event.key == pygame.K_DOWN:
+                print("key down")
+                Tetramino.increaseGravity = True
+                
+            if event.key == pygame.K_SPACE and not  self.gameover:
+                self.instant()
+                
+            #recording
+            if event.key == pygame.K_F10:
+                print("f10")
+                
+            if event.key == pygame.K_p:
+                can_move = not can_move
+                
+            if event.key== pygame.K_r:
+                self.__init__(ROWS,COLS)
+            
+                
+            if event.key == pygame.K_h:
+                print("h button has been pressed")                
+                         
+                
+            if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                Tetramino.running = False 
+                  
+        if event.type == pygame.KEYUP:
+            print("key up")
+            if event.key == pygame.K_DOWN:
+                print("key up")
+                Tetramino.increaseGravity = False
+
+
 
 tetris = Tetris(ROWS, COLS)
 
 Database.connect()
 
-running = True
-while running:
-    
-    ticks = pygame.time.get_ticks()
-    
-    win.fill(BLACK)
-    k_event = ""
-    
-    counter += 1
-    if counter >= 10000:
-        counter = 0
+# variables for recording
+recording = False
+playback = False
+playback_index = 0
+recorded_events = []
+                
+                
+                
+while Tetramino.running:
         
-    if can_move :
-        if counter % (FPS // (tetris.level * 2)) ==0 or increaseGravity:
+    win.fill(BLACK)
+    
+    Tetramino.counter += 1
+    if Tetramino.counter >= 10000:
+        Tetramino.counter = 0
+        
+    if Tetramino.can_move :
+        if Tetramino.counter % (FPS // (tetris.level * 2)) == 0 or Tetramino.increaseGravity:
             if not tetris.gameover:
                 tetris.gravity()
      
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False          
-
-        if event.type == pygame.KEYDOWN:
-
-            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                tetris.xMovement(-1)
-                keyList.append((int(pygame.time.get_ticks()), event.key))
-                mov = " a\n"
-                time = str(pygame.time.get_ticks())
-                e = time +"," + mov
-                #f.writelines(str(e))
-                
-                
-            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                tetris.xMovement(1)
-                
-                r = " d\n"
-                time = str(pygame.time.get_ticks())
-                e = time +","+ r
-                #f.writelines(str(e))
-                
-            if event.key == pygame.K_UP or event.key == pygame.K_u:
-                tetris.rotate()
-                print(tetris.figure.color,tetris.figure.type)
-                u = " w\n"
-                time = str(pygame.time.get_ticks())
-                e = time + "," + u 
-             #   f.writelines(str(e))
-                
-            if event.key == pygame.K_DOWN:
-                increaseGravity = True
-                print(k_event)
-                u = " s\n"
-                time = str(pygame.time.get_ticks())
-                e = time + "," + u 
-              #  f.writelines(str(e))
-               
-            if event.key == pygame.K_SPACE and not tetris.gameover:
-                tetris.instant()
-                
-            #recording
-            if event.key == pygame.K_F10:
-                print("time for the truth")  
-                f.close()              
-            if event.key == pygame.K_p:
-                can_move = not can_move
-            if event.key== pygame.K_r:
-                tetris.__init__(ROWS,COLS)
-            
-            
-                
-            if event.key == pygame.K_h:
-                currtick = pygame.time.get_ticks()
-                for x in keyList:
-                    # Variable that counts
-                    cx = 0
-                    # current tick time combined with the movment tick
-                    cc = (int(keyList[cx][0])) + currtick
-                    print ("This is cc -", cc)
-                    # puts key id into xx variable
-                    xx= int(keyList[cx][1])
-                    
-                    #prints both
-                    print(keyList[cx][0],keyList[cx][1])
-                    #adds +1 to cx
-                    cx =+ 1
-                # if current tick + time when pressed is equal to current game tick it executes print and presses the key
-                if cc == currtick:
-                    print(" works")
-                    if(xx == 1073741904):
-                        keyboard.press_release('a')
-                              
-              
-                
-                
-            if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
-                running = False 
-                  
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_DOWN:
-                increaseGravity = False
-                
-
+            Tetramino.running = False
+        elif event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
+            if event.key == pygame.K_ESCAPE:
+                Tetramino.running = False
+            else:
+                # handle the event
+                tetris.handle_event(event)
+                print("you pressed a key")
+                if recording:
+                    # save the event and the time
+                    recorded_events.append((event, time.time()))  # event
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                recording = not recording
+            elif event.button == 3:
+                playback = not playback
+                if playback:
+                    if recorded_events:
+                        playback_index = 0  # always start playback at zero
+                        queue_next_event(recorded_events, playback_index)
+                    else:
+                        playback = False  # can't playback no events
+                else:  # disable playback timer
+                    pygame.time.set_timer(CUSTOM_PLAYBACK_EVENT, 0)
+        elif event.type == CUSTOM_PLAYBACK_EVENT:
+            pygame.time.set_timer(CUSTOM_PLAYBACK_EVENT, 0)  # disable playback timer
+            # post the next event
+            pygame.event.post(recorded_events[playback_index][0])
+            playback_index += 1
+            if playback_index < len(recorded_events):
+                print(queue_next_event)
+                queue_next_event(recorded_events, playback_index)
+            else:
+                playback = False
+    
+    
     tetris.drawGrid()
     # display board
     for x in range(ROWS):
