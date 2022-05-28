@@ -1,34 +1,27 @@
-import keyboard
+# tiek importētas nepieciešamas bibliotēkas programmai
 import pygame
 import random
 import time
 
-from db import Database
 # inizalize tetri un nosaka screen vertibu
-
-
-
 pygame.init()
 
+
+#Ekrāna vērtība
 SCREEN = WIDTH, HEIGHT = 600,600
 win = pygame.display.set_mode(SCREEN)
-
-
-CUSTOM_PLAYBACK_EVENT = pygame.USEREVENT + 1
-
 
 
 # FPS
 clock = pygame.time.Clock()
 FPS = 60
 
-# noteiktās vērtības 
+# noteiktas vērtības kāda būs spēļu laukums un viena kvadrāta lielums
 CELLSIZE = 35
 ROWS = (HEIGHT-25) // CELLSIZE
 COLS = (WIDTH - 250) // CELLSIZE
 
 # COLORS
-
 BLACK = (0,0,0)
 BLUE = (31,25,76)
 RED = (252,91,122)
@@ -52,8 +45,6 @@ Assets = {
     4: img4
 }
 
-# variables
-
 
 
 # FONTS
@@ -61,18 +52,9 @@ font = pygame.font.Font('Fonts/FontsFree-Net-Tetris.ttf',50)
 font2 = pygame.font.SysFont('cursive',25)
 
 
-def queue_next_event(event_list, event_index):
-        """Set a timer for the next playback event"""
-        if event_index == 0:
-            timer_duration = 100  # effectively immediate
-        else:
-            elapsed_time = event_list[event_index][1] - event_list[event_index - 1][1]
-            timer_duration = round(elapsed_time * 1000)  # convert to milliseconds
-        pygame.time.set_timer(CUSTOM_PLAYBACK_EVENT, timer_duration)
-        print(f"{time.time()} Set timer for {timer_duration} ms")
-
 class Tetramino:
-    
+
+    # mainīgie kas nodrošina spēles funckionalitāti
     running = True
     counter = 0
     can_move = True   
@@ -83,7 +65,9 @@ class Tetramino:
     # 4   5   6   7
     # 8   9   10  11
     # 12  13  14  15
+    
 # pieminet to ka figuras un tas rotacijas ir veidotas pec noteikumiem
+#Figūru masīvs
     FIGURES = {
         'I' : [[1, 2, 5, 6]],
         'S' : [[1, 2, 5, 6]],
@@ -94,7 +78,7 @@ class Tetramino:
         'J' : [[1, 2, 5, 6]]   
         
     }
-    
+# Tipu masīvs
     TYPES = ['I', 'S', 'Z', 'O', 'T', 'L', 'J']
     
 
@@ -107,6 +91,7 @@ class Tetramino:
         self.shape = self.FIGURES[self.type]
         self.color = random.randint(1,4)
         self.rotation = 0
+        
 # atgriež shape un tas rotācijas vērtību
     def image(self):
         return self.shape[self.rotation]
@@ -128,43 +113,48 @@ class Tetris:
         
         
     def drawGrid(self):    
-            # Izveido rindiņas ievērjoto arī cellsize
+        # Izveido rindiņas ievērjoto arī cellsize
         for i in range(self.rows+1):
             pygame.draw.line(win,GRAY,(0, CELLSIZE*i),(WIDTH,CELLSIZE*i),1)
         # Izveido kollonas ievērjoto arī cellsize
         for j in range(self.cols+1):
             pygame.draw.line(win,GRAY,(CELLSIZE*j,0),(CELLSIZE*j,HEIGHT),1)
     
+        #Izveidot 2 jaunas figūras lai varētu spēlētājam padot tālāk kāda figurā būs nakamā
     def newFigure(self):
         if not self.nextFigure:
             self.nextFigure = Tetramino(5, 0)           
         self.figure = self.nextFigure
         self.nextFigure = Tetramino(5, 0)
         
-        
+        # Gravitācijas metode
     def gravity(self):
         self.figure.y += 1   
         if self.intersect():
             self.figure.y -= 1
             self.freeze()
-    
+
+        # Instant metode kas liek figurāi uzreiz nokrist uz zemes
     def instant(self):
         while not self.intersect():
             self.figure.y += 1
         self.figure.y -= 1
         self.freeze()
 
+        # Kustības uz sāniem
     def xMovement(self,dx):
         self.figure.x += dx
         if self.intersect():
             self.figure.x -= dx
         
+        #Rotācija
     def rotate(self):
         rotation = self.figure.rotation
         self.figure.rotate()
         if self.intersect():
             self.figure.rotation = rotation
     
+        # Intersect metode kas pārbauda vai 4x4 matricā nav citas figūras vai spēles robeža ja ir tad intersection paliek true
     def intersect(self):
         intersection = False
         for i in range(4):
@@ -176,7 +166,8 @@ class Tetris:
                         self.board[i+self.figure.y][j+self.figure.x]> 0:
                             intersection = True
         return intersection
-    # parbauda katru rindu vai viņa nav pilna, ja ir pilna tad viņu izdzēsīs un pievienos jaunu rindu spēles augšā
+    
+    # parbauda katru rindu vai viņa nav pilna, ja ir pilna tad viņu izdzēsīs un pievienos jaunu rindu spēles laukuma augšā
     def destroy_line(self):
         rerun = False
         for y in range(self.rows-1,0,-1):
@@ -185,7 +176,6 @@ class Tetris:
             for x in range(0,self.cols):
                 if self.board[y][x] == 0:
                     is_full = False
-            
             if is_full:
                 del self.board[y]
                 self.board.insert(0,[0 for i in range(self.cols)])
@@ -196,7 +186,8 @@ class Tetris:
                    
         if rerun:
             self.destroy_line()
-            
+      
+    # pirmie divi cikli uzģenerē šo 4x4 matricu un par cik figūras ir nekas vairāk kā tikai 4x4 matrica ar aizpildītām vērtībam ši funckija         
     def freeze(self):
         for i in range(4):
             for j in range(4):
@@ -206,7 +197,7 @@ class Tetris:
         self.newFigure()
         if self.intersect():
             self.gameover = True       
-                       
+#Spēlētaju kustības metode                       
     def handle_event(self,event):
         if event.type == pygame.KEYDOWN:
 
@@ -220,17 +211,14 @@ class Tetris:
                 self.rotate()
                 
             if event.key == pygame.K_DOWN:
-                print("key down")
                 Tetramino.increaseGravity = True
                 
             if event.key == pygame.K_SPACE and not  self.gameover:
                 self.instant()
                 
-            #recording
-            if event.key == pygame.K_F10:
-                print("f10")
                 
             if event.key == pygame.K_p:
+                print("Pause")
                 can_move = not can_move
                 
             if event.key== pygame.K_r:
@@ -254,15 +242,6 @@ class Tetris:
 
 tetris = Tetris(ROWS, COLS)
 
-Database.connect()
-
-# variables for recording
-recording = False
-playback = False
-playback_index = 0
-recorded_events = []
-                
-                
                 
 while Tetramino.running:
         
@@ -287,32 +266,6 @@ while Tetramino.running:
                 # handle the event
                 tetris.handle_event(event)
                 print("you pressed a key")
-                if recording:
-                    # save the event and the time
-                    recorded_events.append((event, time.time()))  # event
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                recording = not recording
-            elif event.button == 3:
-                playback = not playback
-                if playback:
-                    if recorded_events:
-                        playback_index = 0  # always start playback at zero
-                        queue_next_event(recorded_events, playback_index)
-                    else:
-                        playback = False  # can't playback no events
-                else:  # disable playback timer
-                    pygame.time.set_timer(CUSTOM_PLAYBACK_EVENT, 0)
-        elif event.type == CUSTOM_PLAYBACK_EVENT:
-            pygame.time.set_timer(CUSTOM_PLAYBACK_EVENT, 0)  # disable playback timer
-            # post the next event
-            pygame.event.post(recorded_events[playback_index][0])
-            playback_index += 1
-            if playback_index < len(recorded_events):
-                print(queue_next_event)
-                queue_next_event(recorded_events, playback_index)
-            else:
-                playback = False
     
     
     tetris.drawGrid()
