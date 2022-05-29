@@ -1,7 +1,10 @@
 # tiek importētas nepieciešamas bibliotēkas programmai
 import pygame
 import random
-import time
+
+
+from db import Database
+
 
 # inizalize tetri un nosaka screen vertibu
 pygame.init()
@@ -11,6 +14,9 @@ pygame.init()
 SCREEN = WIDTH, HEIGHT = 600,600
 win = pygame.display.set_mode(SCREEN)
 
+
+
+f = open('temp.txt', 'w')
 
 # FPS
 clock = pygame.time.Clock()
@@ -202,47 +208,85 @@ class Tetris:
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                self.xMovement(-1)                
+                self.xMovement(-1)    
+                type = str(tetris.figure.type)
+                            
+                mov = " a\n"
+                time = str(pygame.time.get_ticks())
+                e = type + "," + time + "," + mov 
                 
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 self.xMovement(1)
+                type = str(tetris.figure.type)
+                r = " d\n"
+                time = str(pygame.time.get_ticks())
+                e = type + "," + time + "," + r
+                f.writelines(str(e))
+                
+
                 
             if event.key == pygame.K_UP or event.key == pygame.K_u:
                 self.rotate()
                 
+                print(tetris.figure.type)
+                u = " w\n"
+                time = str(pygame.time.get_ticks())
+                type = str(tetris.figure.type)
+                e = type + "," + time + "," + u 
+                f.writelines(str(e))
+                
             if event.key == pygame.K_DOWN:
                 Tetramino.increaseGravity = True
+                u = " s\n"
+                time = str(pygame.time.get_ticks())
+                type = str(tetris.figure.type)
+                e = type + "," + time + "," + u 
+                f.writelines(str(e))
+                
                 
             if event.key == pygame.K_SPACE and not  self.gameover:
                 self.instant()
+                u = " space\n"
+                time = str(pygame.time.get_ticks())
+                type = str(tetris.figure.type)
+                e = type + "," + time + "," + u 
+                f.writelines(str(e))
                 
                 
             if event.key == pygame.K_p:
                 print("Pause")
                 can_move = not can_move
                 
-            if event.key== pygame.K_r:
-                self.__init__(ROWS,COLS)
-            
+                u = " p\n"
+                time = str(pygame.time.get_ticks())
+                e = type + "," + time + "," + u 
+                f.writelines(str(e))
                 
-            if event.key == pygame.K_h:
-                print("h button has been pressed")                
-                         
+            if event.key== pygame.K_r:
+                print("gameover")
+                Database.connect_and_save()
+                self.__init__(ROWS,COLS)
+
+            
                 
             if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
                 Tetramino.running = False 
                   
         if event.type == pygame.KEYUP:
-            print("key up")
             if event.key == pygame.K_DOWN:
-                print("key up")
                 Tetramino.increaseGravity = False
 
 
 
 tetris = Tetris(ROWS, COLS)
+Database.connect_and_execute()
 
-                
+'''
+temp1 = 3
+getLastCreatedGame = 'SELECT * FROM gamecount ORDER BY ID DESC LIMIT 1'
+addToGamecountTable= 'insert into gamecount(gamecount) value ("',(int(getLastCreatedGame[1])+1),'")'
+'''
+
 while Tetramino.running:
         
     win.fill(BLACK)
@@ -265,8 +309,6 @@ while Tetramino.running:
             else:
                 # handle the event
                 tetris.handle_event(event)
-                print("you pressed a key")
-    
     
     tetris.drawGrid()
     # display board
@@ -310,9 +352,10 @@ while Tetramino.running:
     win.blit(scoreimg,(400 - scoreimg.get_width()//2,HEIGHT - 110))
     win.blit(levelimg,(400 - levelimg.get_width()//2,HEIGHT - 30)) 
      
-    
+      
         #GAMEOVER
     if tetris.gameover:
+        
         rect = pygame.Rect(50,140,WIDTH-190, HEIGHT - 350)
         pygame.draw.rect(win,BLACK, rect)
         pygame.draw.rect(win,RED,rect,2)
