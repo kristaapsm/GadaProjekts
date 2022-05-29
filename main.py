@@ -1,66 +1,72 @@
+# tiek importētas nepieciešamas bibliotēkas programmai
 import pygame
 import random
-import time
-
 from db import Database
+
 # inizalize tetri un nosaka screen vertibu
-
-
-keyList= []
 pygame.init()
 
+#Ekrāna vērtība
 SCREEN = WIDTH, HEIGHT = 600,600
 win = pygame.display.set_mode(SCREEN)
 
-#f = open('m.txt', 'r')
-
+#Atver vai izveido temp failu
+f = open('temp.txt', 'w')
 
 # FPS
 clock = pygame.time.Clock()
 FPS = 60
 
-# noteiktās vērtības 
+# noteiktas vērtības kāda būs spēļu laukums un viena kvadrāta lielums
 CELLSIZE = 35
 ROWS = (HEIGHT-25) // CELLSIZE
 COLS = (WIDTH - 250) // CELLSIZE
 
 # COLORS
-
 BLACK = (0,0,0)
 BLUE = (31,25,76)
 RED = (252,91,122)
 WHITE = (255,255,255)
 GRAY = (220,220,220)
 
-
-
-
 # BLOCKS 
-
-img1 = pygame.image.load('Assets/11.png')
-img2 = pygame.image.load('Assets/22.png')
-img3 = pygame.image.load('Assets/33.png')
-img4 = pygame.image.load('Assets/44.png')
+img1 = pygame.image.load('Assets/blue1.png')
+img2 = pygame.image.load('Assets/darkblue1.png')
+img3 = pygame.image.load('Assets/green1.png')
+img4 = pygame.image.load('Assets/pink1.png')
+img5 = pygame.image.load('Assets/orange1.png')
+img6 = pygame.image.load('Assets/red1.png')
+img7 = pygame.image.load('Assets/yellow1.png')
 
 Assets = {
     1: img1,
     2: img2,
     3: img3,
-    4: img4
+    4: img4,
+    5: img5,
+    6: img6,
+    7: img7
 }
 
 # FONTS
-font = pygame.font.Font('Fonts/FontsFree-Net-Tetris.ttf',50)
+font = pygame.font.Font('Fonts/EightBit Atari-91.ttf',50)
 font2 = pygame.font.SysFont('cursive',25)
 
-
 class Tetramino:
+    # mainīgie kas nodrošina spēles funckionalitāti
+    running = True
+    counter = 0
+    can_move = True   
+    increaseGravity = False
+     
     # matrix
     # 0   1   2   3
     # 4   5   6   7
     # 8   9   10  11
     # 12  13  14  15
+    
 # pieminet to ka figuras un tas rotacijas ir veidotas pec noteikumiem
+# Figūru masīvs
     FIGURES = {
         'I' : [[4, 5, 6, 7], [2, 6, 10, 14]],
         'S' : [[4, 5, 1, 2], [1, 5, 6, 10],[8,9,5,6],[0,4,5,9]],
@@ -71,10 +77,9 @@ class Tetramino:
         'J' : [[0, 4,5, 6], [2, 1, 5, 9], [4, 5, 6, 10], [1, 5, 9, 8]]    
         
     }
-    
+# Tipu masīvs
     TYPES = ['I', 'S', 'Z', 'O', 'T', 'L', 'J']
     
-
     def __init__(self,x,y):
         self.x = x
         self.y = y
@@ -82,6 +87,7 @@ class Tetramino:
         self.shape = self.FIGURES[self.type]
         self.color = random.randint(1,4)
         self.rotation = 0
+        
 # atgriež shape un tas rotācijas vērtību
     def image(self):
         return self.shape[self.rotation]
@@ -103,43 +109,48 @@ class Tetris:
         
         
     def drawGrid(self):    
-            # Izveido rindiņas ievērjoto arī cellsize
+        # Izveido rindiņas ievērjoto arī cellsize
         for i in range(self.rows+1):
             pygame.draw.line(win,GRAY,(0, CELLSIZE*i),(WIDTH,CELLSIZE*i),1)
         # Izveido kollonas ievērjoto arī cellsize
         for j in range(self.cols+1):
             pygame.draw.line(win,GRAY,(CELLSIZE*j,0),(CELLSIZE*j,HEIGHT),1)
     
+    #Izveidot 2 jaunas figūras lai varētu spēlētājam padot tālāk kāda figurā būs nakamā
     def newFigure(self):
         if not self.nextFigure:
             self.nextFigure = Tetramino(5, 0)           
         self.figure = self.nextFigure
         self.nextFigure = Tetramino(5, 0)
         
-        
+    # Gravitācijas metode
     def gravity(self):
         self.figure.y += 1   
         if self.intersect():
             self.figure.y -= 1
             self.freeze()
-    
+
+    # Instant metode kas liek figurāi uzreiz nokrist uz zemes
     def instant(self):
         while not self.intersect():
             self.figure.y += 1
         self.figure.y -= 1
         self.freeze()
 
+    # Kustības uz sāniem
     def xMovement(self,dx):
         self.figure.x += dx
         if self.intersect():
             self.figure.x -= dx
         
+    #Rotācija
     def rotate(self):
         rotation = self.figure.rotation
         self.figure.rotate()
         if self.intersect():
             self.figure.rotation = rotation
     
+    # Intersect metode kas pārbauda vai 4x4 matricā nav citas figūras vai spēles robeža ja ir tad intersection paliek true
     def intersect(self):
         intersection = False
         for i in range(4):
@@ -151,7 +162,8 @@ class Tetris:
                         self.board[i+self.figure.y][j+self.figure.x]> 0:
                             intersection = True
         return intersection
-    # parbauda katru rindu vai viņa nav pilna, ja ir pilna tad viņu izdzēsīs un pievienos jaunu rindu spēles augšā
+    
+    # parbauda katru rindu vai viņa nav pilna, ja ir pilna tad viņu izdzēsīs un pievienos jaunu rindu spēles laukuma augšā
     def destroy_line(self):
         rerun = False
         for y in range(self.rows-1,0,-1):
@@ -160,7 +172,6 @@ class Tetris:
             for x in range(0,self.cols):
                 if self.board[y][x] == 0:
                     is_full = False
-            
             if is_full:
                 del self.board[y]
                 self.board.insert(0,[0 for i in range(self.cols)])
@@ -171,131 +182,120 @@ class Tetris:
                    
         if rerun:
             self.destroy_line()
-            
+      
+    # pirmie divi cikli uzģenerē šo 4x4 matricu un par cik figūras ir nekas vairāk kā tikai 4x4 matrica ar aizpildītām vērtībam ši funckija         
     def freeze(self):
         for i in range(4):
             for j in range(4):
                 if i * 4 + j in self.figure.image():
                     self.board[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.destroy_line()
-       #f.writelines(str(tetris.figure.type)+", ")
         self.newFigure()
         if self.intersect():
             self.gameover = True       
-                       
- 
+#Spēlētaju kustības metode                       
+    def handle_event(self,event):
+        if event.type == pygame.KEYDOWN:
 
-counter = 0
-increaseGravity = False
-can_move = True
-d = 0
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.xMovement(-1)    
+                type = str(tetris.figure.type)
+                            
+                mov = " a\n"
+                time = str(pygame.time.get_ticks())
+                e = type + "," + time + "," + mov 
+                
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.xMovement(1)
+                # writing moves
+                type = str(tetris.figure.type)
+                move = " d\n"
+                time = str(pygame.time.get_ticks())
+                e = type + "," + time + "," + move
+                f.writelines(str(e))
+                
+
+                
+            if event.key == pygame.K_UP or event.key == pygame.K_u:
+                self.rotate()
+                # writing moves
+                move = " w\n"
+                time = str(pygame.time.get_ticks())
+                type = str(tetris.figure.type)
+                e = type + "," + time + "," + move
+                f.writelines(str(e))
+                
+            if event.key == pygame.K_DOWN:
+                Tetramino.increaseGravity = True
+                # writing moves
+                move = " s\n"
+                time = str(pygame.time.get_ticks())
+                type = str(tetris.figure.type)
+                e = type + "," + time + "," + move
+                f.writelines(str(e))
+                
+                
+            if event.key == pygame.K_SPACE and not self.gameover:
+                self.instant()
+                # writing moves
+                move = " space\n"
+                time = str(pygame.time.get_ticks())
+                type = str(tetris.figure.type)
+                e = type + "," + time + "," + move
+                f.writelines(str(e))             
+                
+            if event.key == pygame.K_p:
+                print("Pause")
+                can_move = not can_move
+                
+                move = " p\n"
+                time = str(pygame.time.get_ticks())
+                e = type + "," + time + "," + move 
+                f.writelines(str(e))
+                
+            if event.key== pygame.K_r:
+                f.close() 
+                Database.connect_and_save()
+                self.__init__(ROWS,COLS)
+                print("New Game started!")
+                
+            if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                print("Good Bye!")
+                Tetramino.running = False 
+                  
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_DOWN:
+                Tetramino.increaseGravity = False
+
+
 
 tetris = Tetris(ROWS, COLS)
+Database.connect_and_execute()
 
-Database.connect()
 
-running = True
-while running:
-    
-    ticks = pygame.time.get_ticks()
-    
-    win.fill(BLACK)
-    k_event = ""
-    
-    counter += 1
-    if counter >= 10000:
-        counter = 0
+while Tetramino.running:
         
-    if can_move :
-        if counter % (FPS // (tetris.level * 2)) ==0 or increaseGravity:
+    win.fill(BLACK)
+    
+    Tetramino.counter += 1
+    if Tetramino.counter >= 10000:
+        Tetramino.counter = 0
+        
+    if Tetramino.can_move :
+        if Tetramino.counter % (FPS // (tetris.level * 2)) == 0 or Tetramino.increaseGravity:
             if not tetris.gameover:
                 tetris.gravity()
      
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False          
-
-        if event.type == pygame.KEYDOWN:
-
-            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                tetris.xMovement(-1)
-                keyList.append((int(pygame.time.get_ticks()), event.key))
-                mov = " a\n"
-                time = str(pygame.time.get_ticks())
-                e = time +"," + mov
-                #f.writelines(str(e))
-                
-                
-            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                tetris.xMovement(1)
-                
-                r = " d\n"
-                time = str(pygame.time.get_ticks())
-                e = time +","+ r
-                #f.writelines(str(e))
-                
-            if event.key == pygame.K_UP or event.key == pygame.K_u:
-                tetris.rotate()
-                print(tetris.figure.color,tetris.figure.type)
-                u = " w\n"
-                time = str(pygame.time.get_ticks())
-                e = time + "," + u 
-             #   f.writelines(str(e))
-                
-            if event.key == pygame.K_DOWN:
-                increaseGravity = True
-                print(k_event)
-                u = " s\n"
-                time = str(pygame.time.get_ticks())
-                e = time + "," + u 
-              #  f.writelines(str(e))
-               
-            if event.key == pygame.K_SPACE and not tetris.gameover:
-                tetris.instant()
-                
-            #recording
-            if event.key == pygame.K_F10:
-                print("time for the truth")  
-                f.close()              
-            if event.key == pygame.K_p:
-                can_move = not can_move
-            if event.key== pygame.K_r:
-                tetris.__init__(ROWS,COLS)
-            
-            
-                
-            if event.key == pygame.K_h:
-                currtick = pygame.time.get_ticks()
-                for x in keyList:
-                    # Variable that counts
-                    cx = 0
-                    # current tick time combined with the movment tick
-                    cc = (int(keyList[cx][0])) + currtick
-                    print ("This is cc -", cc)
-                    # puts key id into xx variable
-                    xx= int(keyList[cx][1])
-                    
-                    #prints both
-                    print(keyList[cx][0],keyList[cx][1])
-                    #adds +1 to cx
-                    cx =+ 1
-                # if current tick + time when pressed is equal to current game tick it executes print and presses the key
-                if cc == currtick:
-                    print(" works")
-                    if(xx == 1073741904):
-                        keyboard.press_release('a')
-                              
-              
-                
-                
-            if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
-                running = False 
-                  
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_DOWN:
-                increaseGravity = False
-                
-
+            Tetramino.running = False
+        elif event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
+            if event.key == pygame.K_ESCAPE:
+                Tetramino.running = False
+            else:
+                # handle the event
+                tetris.handle_event(event)
+    
     tetris.drawGrid()
     # display board
     for x in range(ROWS):
@@ -313,14 +313,11 @@ while running:
                 x = CELLSIZE * (tetris.figure.x + j)
                 y = CELLSIZE * (tetris.figure.y + i)
                 win.blit(img,(x,y))
-                #pygame.draw.rect(win,RED, (x,y,CELLSIZE-1,CELLSIZE-1))
 # Rāmji 
     pygame.draw.rect(win, BLUE,(WIDTH - 249, 0,HEIGHT, 600))   
     pygame.draw.rect(win, BLUE,(0, HEIGHT-39, WIDTH,120))   
     pygame.draw.rect(win, BLACK,(0, 0, WIDTH, HEIGHT),2)    
-    
-
-        
+            
     #HUD
     if tetris.nextFigure:
         for i in range(4):
@@ -329,8 +326,7 @@ while running:
                     x = 400 + CELLSIZE * (tetris.nextFigure.x + j - 4)
                     y = 100 + CELLSIZE * (tetris.nextFigure.y + i)
                     img = Assets[tetris.nextFigure.color]
-                    win.blit(img, (x,y)) 
-    
+                    win.blit(img, (x,y))     
     
     scoreimg = font.render(f'{tetris.score}', True, WHITE)
     levelimg = font2.render(f'Level : {tetris.level}', True, WHITE)
@@ -338,9 +334,9 @@ while running:
     win.blit(scoreimg,(400 - scoreimg.get_width()//2,HEIGHT - 110))
     win.blit(levelimg,(400 - levelimg.get_width()//2,HEIGHT - 30)) 
      
-    
         #GAMEOVER
     if tetris.gameover:
+        print("Game ended!")
         rect = pygame.Rect(50,140,WIDTH-190, HEIGHT - 350)
         pygame.draw.rect(win,BLACK, rect)
         pygame.draw.rect(win,RED,rect,2)
@@ -353,14 +349,7 @@ while running:
         win.blit(msg1, (rect.centerx - msg1.get_width()//2, rect.y+80))
         win.blit(msg2, (rect.centerx - msg2.get_width()//2, rect.y+110))
         
-        
     clock.tick(FPS)
     pygame.display.update()
             
 pygame.quit()
-            
-            
-            
-            
-            
-            
