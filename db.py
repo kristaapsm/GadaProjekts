@@ -8,10 +8,10 @@ class Database:
     def connect_and_execute():
         getLastCreatedGame = 'SELECT * FROM gamecount ORDER BY ID DESC LIMIT 1'
         db = mysql.connector.connect(
-            host="localhost",
-            user="root", 
-            passwd="1232",
-            database= "tetris"
+            host="sql11.freemysqlhosting.net",
+            user="sql11498615", 
+            passwd="Zc15ynVuIw",
+            database= "sql11498615"
             )
         mycursor = db.cursor()
         mycursor.execute(getLastCreatedGame);
@@ -31,10 +31,10 @@ class Database:
         
     def connect_and_save():        
         db = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            passwd="1232",
-            database= "tetris"
+            host="sql11.freemysqlhosting.net",
+            user="sql11498615", 
+            passwd="Zc15ynVuIw",
+            database= "sql11498615"
             )
         
         mycursor = db.cursor()
